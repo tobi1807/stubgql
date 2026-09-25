@@ -1,0 +1,32 @@
+[
+  {
+    "arguments": {},
+    "identity": null,
+    "source": { "id": "post-1", "title": "First post" },
+    "request": { "headers": {}, "domainName": null },
+    "prev": null,
+    "info": {
+      "parentTypeName": "Post",
+      "fieldName": "author",
+      "variables": {},
+      "selectionSetList": ["id", "firstName"],
+      "selectionSetGraphQL": "{\n  id\n  firstName\n}"
+    },
+    "stash": {}
+  },
+  {
+    "arguments": {},
+    "identity": null,
+    "source": { "id": "post-2", "title": "Second post" },
+    "request": { "headers": {}, "domainName": null },
+    "prev": null,
+    "info": {
+      "parentTypeName": "Post",
+      "fieldName": "author",
+      "variables": {},
+      "selectionSetList": ["id", "firstName"],
+      "selectionSetGraphQL": "{\n  id\n  firstName\n}"
+    },
+    "stash": {}
+  }
+]

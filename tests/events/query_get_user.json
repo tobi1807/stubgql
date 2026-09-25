@@ -1,0 +1,18 @@
+{
+  "arguments": { "id": "user-1" },
+  "identity": null,
+  "source": null,
+  "request": {
+    "headers": { "content-type": "application/json", "x-api-key": "redacted" },
+    "domainName": null
+  },
+  "prev": null,
+  "info": {
+    "parentTypeName": "Query",
+    "fieldName": "getUser",
+    "variables": { "id": "user-1" },
+    "selectionSetList": ["id", "firstName", "email", "role", "posts", "posts/id", "posts/title"],
+    "selectionSetGraphQL": "{\n  id\n  firstName\n  email\n  role\n  posts {\n    id\n    title\n  }\n}"
+  },
+  "stash": {}
+}

@@ -1,0 +1,75 @@
+[project]
+name = "stubgql"
+version = "0.0.1"
+description = "Schema-aware stub data for GraphQL, with built-in AWS AppSync support"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Tobi" }]
+requires-python = ">=3.11"
+dependencies = [
+    "faker>=30",
+    "graphql-core>=3.2",
+]
+keywords = ["graphql", "appsync", "stub", "testing", "faker"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Software Development :: Testing",
+    "Typing :: Typed",
+]
+
+[project.urls]
+Repository = "https://github.com/tobi1807/stubgql"
+Issues = "https://github.com/tobi1807/stubgql/issues"
+
+[build-system]
+requires = ["uv_build>=0.12,<0.13"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "hypothesis>=6.168",
+    "prek>=0.5.5",
+    "pytest>=9.1",
+    "ruff>=0.16.10",
+    "syrupy>=6.1",
+    "ty==0.0.84",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["--strict-markers", "--strict-config"]
+xfail_strict = true
+
+[tool.ruff]
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "RUF", "TID", "D"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["D"]
+"scripts/**" = ["D"]
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"random.betavariate".msg = "Use a seeded random.Random instance (ADR 0004)."
+"random.choice".msg = "Use a seeded random.Random instance (ADR 0004)."
+"random.choices".msg = "Use a seeded random.Random instance (ADR 0004)."
+"random.gauss".msg = "Use a seeded random.Random instance (ADR 0004)."
+"random.getrandbits".msg = "Use a seeded random.Random instance (ADR 0004)."
+"random.randint".msg = "Use a seeded random.Random instance (ADR 0004)."
+"random.random".msg = "Use a seeded random.Random instance (ADR 0004)."
+"random.randrange".msg = "Use a seeded random.Random instance (ADR 0004)."
+"random.sample".msg = "Use a seeded random.Random instance (ADR 0004)."
+"random.seed".msg = "Use a seeded random.Random instance (ADR 0004)."
+"random.shuffle".msg = "Use a seeded random.Random instance (ADR 0004)."
+"random.uniform".msg = "Use a seeded random.Random instance (ADR 0004)."

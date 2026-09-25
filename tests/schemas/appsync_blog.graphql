@@ -1,0 +1,75 @@
+# AppSync-style schema: uses AWS scalars and directives without declaring them,
+# exactly as AppSync accepts it.
+
+schema {
+  query: Query
+  mutation: Mutation
+  subscription: Subscription
+}
+
+interface Node {
+  id: ID!
+}
+
+type User implements Node @aws_cognito_user_pools @aws_iam {
+  id: ID!
+  firstName: String!
+  lastName: String!
+  email: AWSEmail!
+  avatarUrl: AWSURL
+  age: Int
+  isActive: Boolean!
+  role: Role!
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime
+  posts: [Post!]!
+}
+
+type Post implements Node {
+  id: ID!
+  title: String!
+  body: String
+  author: User!
+  tags: [String!]
+  metadata: AWSJSON
+  publishedOn: AWSDate
+}
+
+type Comment {
+  text: String!
+  createdAt: AWSTimestamp!
+}
+
+union SearchResult = User | Post
+
+type PostConnection {
+  items: [Post!]!
+  nextToken: String
+}
+
+enum Role {
+  ADMIN
+  EDITOR
+  READER
+}
+
+input CreatePostInput {
+  title: String!
+  body: String
+  tags: [String!]
+}
+
+type Query {
+  getUser(id: ID!): User
+  listPosts(limit: Int, nextToken: String): PostConnection!
+  search(term: String!): [SearchResult!]!
+  node(id: ID!): Node
+}
+
+type Mutation {
+  createPost(input: CreatePostInput!): Post! @aws_iam
+}
+
+type Subscription {
+  onCreatePost: Post @aws_subscribe(mutations: ["createPost"])
+}
