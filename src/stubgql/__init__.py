@@ -2,8 +2,9 @@
 
 from importlib.metadata import version
 
-from stubgql._errors import StubgqlError
+from stubgql._errors import SchemaError, StubgqlError
+from stubgql._stubber import Stubber
 
-__all__ = ["StubgqlError", "__version__"]
+__all__ = ["SchemaError", "Stubber", "StubgqlError", "__version__"]
 
 __version__ = version("stubgql")
