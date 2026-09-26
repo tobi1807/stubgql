@@ -98,3 +98,11 @@ def test_rejects_a_type_that_does_not_satisfy_its_interface():
 def test_rejects_a_schema_path_that_does_not_exist():
     with pytest.raises(SchemaError, match=r"missing\.graphql"):
         Stubber("missing.graphql")
+
+
+def test_loads_sdl_whose_last_line_mentions_a_schema_file():
+    Stubber("type Query { hello: String }\n# generated from schema.graphql")
+
+
+def test_loads_single_line_sdl_ending_with_a_schema_file_name():
+    Stubber("type Query { hello: String } # see schema.graphql")

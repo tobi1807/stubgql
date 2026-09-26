@@ -34,10 +34,19 @@ def load_schema(source: SchemaSource) -> GraphQLSchema:
 
 
 def _read_sdl(source: SchemaSource) -> str:
-    if isinstance(source, str) and not source.endswith(SCHEMA_FILE_SUFFIXES):
+    if isinstance(source, str) and not _looks_like_path(source):
         return source
     path = Path(source)
     try:
         return path.read_text(encoding="utf-8")
     except OSError as error:
         raise SchemaError(f"Can't read schema file {path}: {error.strerror}") from error
+
+
+def _looks_like_path(source: str) -> bool:
+    # SDL always spans lines or contains braces; a schema path never does.
+    return (
+        "\n" not in source
+        and "{" not in source
+        and source.endswith(SCHEMA_FILE_SUFFIXES)
+    )
