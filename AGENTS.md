@@ -63,8 +63,10 @@ docs/adr/                 # decisions that are hard to reverse
 
 ## Git
 
-- Branch from `main`; never commit to `main` directly.
-- Commit messages and PR titles follow Conventional Commits: `feat:`, `fix:`, `docs:`, `test:`, `refactor:`, `chore:`, `ci:`. PRs are squash-merged, so the PR title becomes the commit on `main` and feeds the release notes.
+- Branch from `main`; never commit to `main` directly. Keep each branch to one focused change.
+- Commit messages follow Conventional Commits: `feat:`, `fix:`, `docs:`, `test:`, `refactor:`, `chore:`, `ci:`.
+- **For now, all work stays local.** Don't push and don't open PRs. Finish a branch by squash-merging it into local `main` (`git merge --squash <branch>`, then one Conventional Commit), and delete the branch.
+- Once the project is public, changes go through PRs that are squash-merged, so the PR title becomes the commit on `main` and feeds the release notes.
 
 ## Definition of done
 
