@@ -14,7 +14,7 @@ from stubgql._errors import SchemaError
 
 SCHEMA_FILE_SUFFIXES = (".graphql", ".graphqls", ".gql")
 
-SchemaSource = str | os.PathLike[str]
+SchemaSource = str | bytes | os.PathLike[str]
 
 
 def load_schema(source: SchemaSource) -> GraphQLSchema:
@@ -34,13 +34,25 @@ def load_schema(source: SchemaSource) -> GraphQLSchema:
 
 
 def _read_sdl(source: SchemaSource) -> str:
+    if isinstance(source, bytes):
+        return _decode(source, "Schema bytes")
     if isinstance(source, str) and not _looks_like_path(source):
         return source
     path = Path(source)
     try:
-        return path.read_text(encoding="utf-8")
+        data = path.read_bytes()
     except OSError as error:
         raise SchemaError(f"Can't read schema file {path}: {error.strerror}") from error
+    return _decode(data, f"Schema file {path}")
+
+
+def _decode(data: bytes, description: str) -> str:
+    try:
+        return data.decode("utf-8")
+    except UnicodeDecodeError as error:
+        raise SchemaError(
+            f"{description} isn't valid UTF-8 (byte {error.start}: {error.reason})"
+        ) from error
 
 
 def _looks_like_path(source: str) -> bool:

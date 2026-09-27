@@ -106,3 +106,19 @@ def test_loads_sdl_whose_last_line_mentions_a_schema_file():
 
 def test_loads_single_line_sdl_ending_with_a_schema_file_name():
     Stubber("type Query { hello: String } # see schema.graphql")
+
+
+def test_loads_a_schema_from_utf8_bytes():
+    Stubber("type Query { greeting: String } # héllo".encode())
+
+
+def test_rejects_bytes_that_are_not_utf8():
+    with pytest.raises(SchemaError, match="UTF-8"):
+        Stubber(b"type Query { greeting: String } # \xff")
+
+
+def test_rejects_a_schema_file_that_is_not_utf8(tmp_path):
+    schema_file = tmp_path / "schema.graphql"
+    schema_file.write_bytes(b"type Query { greeting: String } # \xff")
+    with pytest.raises(SchemaError, match="UTF-8"):
+        Stubber(schema_file)
