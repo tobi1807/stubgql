@@ -12,12 +12,12 @@ from stubgql import Stubber
 stubber = Stubber("schema.graphql")
 
 
-# As an AppSync direct resolver (in Lambda or anywhere else that receives AppSync events)
+# With AppSync events (in Lambda or anywhere else that receives them)
 def handler(event, context):
-    return stubber.handle(event)
+    return stubber.handle_appsync(event)
 
 
-# Or directly
+# Or with no AppSync involved: stub one field of one type
 stubber.resolve("Query", "getUser", args={"id": "1"})
 ```
 
