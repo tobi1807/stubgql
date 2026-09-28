@@ -59,7 +59,7 @@ docs/adr/                 # decisions that are hard to reverse
 - Work test-first: write a failing test for the behavior, then make it pass.
 - Name tests after behavior: `test_entity_with_same_id_is_identical_across_queries`, not `test_walker_3`.
 - Use real AppSync shapes in `tests/events/` and realistic schemas in `tests/schemas/`.
-- Never run `pytest --snapshot-update` just to make a failing test pass. A snapshot change means generated output changed; confirm it's intended and mention it in the PR.
+- Avoid snapshot tests unless there's no other way to test the behavior. Assert on properties known independently of the code: formats, enum membership, list shapes, and equality across calls or processes.
 
 ## Git
 
