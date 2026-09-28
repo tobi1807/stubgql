@@ -2,9 +2,15 @@
 
 from importlib.metadata import version
 
-from stubgql._errors import SchemaError, StubgqlError
+from stubgql._errors import SchemaError, StubgqlError, UnknownFieldError
 from stubgql._stubber import Stubber
 
-__all__ = ["SchemaError", "Stubber", "StubgqlError", "__version__"]
+__all__ = [
+    "SchemaError",
+    "Stubber",
+    "StubgqlError",
+    "UnknownFieldError",
+    "__version__",
+]
 
 __version__ = version("stubgql")

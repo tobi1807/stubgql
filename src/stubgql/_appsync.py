@@ -1,3 +1,7 @@
+import json
+from datetime import UTC, datetime, timedelta
+
+from faker import Faker
 from graphql import (
     DirectiveDefinitionNode,
     DirectiveNode,
@@ -8,6 +12,8 @@ from graphql import (
     parse,
     visit,
 )
+
+from stubgql._scalars import ScalarGenerator
 
 AWS_SCALARS = frozenset(
     {
@@ -76,3 +82,42 @@ def with_appsync_prelude(document: DocumentNode) -> DocumentNode:
         return document
     prelude = parse("\n".join(declarations))
     return DocumentNode(definitions=(*document.definitions, *prelude.definitions))
+
+
+# Generated moments fall in a fixed window, never relative to "now", so output
+# doesn't change from one day to the next.
+_WINDOW_START = datetime(2020, 1, 1, tzinfo=UTC)
+_WINDOW_SECONDS = int(timedelta(days=6 * 365).total_seconds())
+
+
+def _moment(faker: Faker) -> datetime:
+    return _WINDOW_START + timedelta(
+        seconds=faker.random.randrange(_WINDOW_SECONDS),
+        milliseconds=faker.random.randrange(1000),
+    )
+
+
+def _aws_date_time(faker: Faker) -> str:
+    return _moment(faker).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+
+
+def _aws_json(faker: Faker) -> str:
+    return json.dumps({"id": faker.uuid4(), "name": faker.word()})
+
+
+def _aws_phone(faker: Faker) -> str:
+    # 555-0100 to 555-0199 are reserved for fictional use in North America.
+    return f"+1 {faker.random_int(201, 989)} 555 {faker.random_int(100, 199):04d}"
+
+
+AWS_SCALAR_GENERATORS: dict[str, ScalarGenerator] = {
+    "AWSDate": lambda faker: _moment(faker).date().isoformat(),
+    "AWSTime": lambda faker: _moment(faker).time().isoformat(timespec="milliseconds"),
+    "AWSDateTime": _aws_date_time,
+    "AWSTimestamp": lambda faker: int(_moment(faker).timestamp()),
+    "AWSEmail": lambda faker: faker.email(),
+    "AWSJSON": _aws_json,
+    "AWSURL": lambda faker: faker.url(),
+    "AWSPhone": _aws_phone,
+    "AWSIPAddress": lambda faker: faker.ipv4(),
+}

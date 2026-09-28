@@ -4,3 +4,7 @@ class StubgqlError(Exception):
 
 class SchemaError(StubgqlError):
     """The schema couldn't be read or isn't a valid GraphQL schema."""
+
+
+class UnknownFieldError(StubgqlError):
+    """The requested type or field isn't in the schema."""
