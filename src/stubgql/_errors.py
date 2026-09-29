@@ -8,3 +8,7 @@ class SchemaError(StubgqlError):
 
 class UnknownFieldError(StubgqlError):
     """The requested type or field isn't in the schema."""
+
+
+class InvalidSelectionError(StubgqlError):
+    """The selection isn't a valid GraphQL selection set."""

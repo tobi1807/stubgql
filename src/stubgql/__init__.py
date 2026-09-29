@@ -2,10 +2,16 @@
 
 from importlib.metadata import version
 
-from stubgql._errors import SchemaError, StubgqlError, UnknownFieldError
+from stubgql._errors import (
+    InvalidSelectionError,
+    SchemaError,
+    StubgqlError,
+    UnknownFieldError,
+)
 from stubgql._stubber import Stubber
 
 __all__ = [
+    "InvalidSelectionError",
     "SchemaError",
     "Stubber",
     "StubgqlError",
