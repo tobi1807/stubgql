@@ -1,3 +1,4 @@
+import threading
 from collections.abc import Mapping
 from typing import Any
 
@@ -31,7 +32,7 @@ class Stubber:
 
     def __init__(self, schema: SchemaSource) -> None:
         self._schema = load_schema(schema)
-        self._faker = Faker()
+        self._local = threading.local()
         self._scalar_generators = SCALAR_GENERATORS | AWS_SCALAR_GENERATORS
 
     def resolve(
@@ -60,19 +61,27 @@ class Stubber:
         field = fields.get(field_name)
         if field is None:
             raise UnknownFieldError(f"{type_name}.{field_name} is not in the schema")
-        self._faker.seed_instance(derive_seed(type_name, field_name, args or {}))
-        return self._stub(field.type)
+        faker = self._faker()
+        faker.seed_instance(derive_seed(type_name, field_name, args or {}))
+        return self._stub(field.type, faker)
 
-    def _stub(self, type_: GraphQLOutputType) -> Any:
+    def _faker(self) -> Faker:
+        # Faker instances hold random state, so each thread gets its own.
+        faker = getattr(self._local, "faker", None)
+        if faker is None:
+            faker = self._local.faker = Faker()
+        return faker
+
+    def _stub(self, type_: GraphQLOutputType, faker: Faker) -> Any:
         nullable = get_nullable_type(type_)
         if isinstance(nullable, GraphQLList):
-            length = self._faker.random_int(*LIST_LENGTH)
-            return [self._stub(nullable.of_type) for _ in range(length)]
+            length = faker.random_int(*LIST_LENGTH)
+            return [self._stub(nullable.of_type, faker) for _ in range(length)]
         if isinstance(nullable, GraphQLEnumType):
-            return self._faker.random_element(list(nullable.values))
+            return faker.random_element(list(nullable.values))
         if not isinstance(nullable, GraphQLScalarType):
             raise NotImplementedError("object, interface and union stubs")
         generator = self._scalar_generators.get(
             nullable.name, self._scalar_generators["String"]
         )
-        return generator(self._faker)
+        return generator(faker)
