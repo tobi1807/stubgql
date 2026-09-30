@@ -5,10 +5,12 @@ from typing import Any
 from faker import Faker
 from graphql import (
     GraphQLEnumType,
+    GraphQLInterfaceType,
     GraphQLList,
     GraphQLObjectType,
     GraphQLOutputType,
     GraphQLScalarType,
+    GraphQLUnionType,
     get_named_type,
     get_nullable_type,
     is_leaf_type,
@@ -19,11 +21,16 @@ from stubgql._errors import InvalidSelectionError, UnknownFieldError
 from stubgql._scalars import SCALAR_GENERATORS
 from stubgql._schema import SchemaSource, load_schema
 from stubgql._seeding import derive_seed
-from stubgql._selection import Selection, full_selection, parse_selection
+from stubgql._selection import (
+    FULL_SELECTION_DEPTH,
+    CompositeType,
+    Selection,
+    fields_for,
+    full_selection,
+    parse_selection,
+)
 
 LIST_LENGTH = (2, 5)
-# Object levels included when the caller gives no selection.
-FULL_SELECTION_DEPTH = 3
 
 
 class Stubber:
@@ -77,9 +84,9 @@ class Stubber:
         else:
             named = get_named_type(field.type)
             parsed = (
-                full_selection(named, FULL_SELECTION_DEPTH)
-                if isinstance(named, GraphQLObjectType)
-                else {}
+                full_selection(named, FULL_SELECTION_DEPTH, self._schema)
+                if isinstance(named, CompositeType)
+                else Selection()
             )
         seed = derive_seed(type_name, field_name, args or {})
         return self._stub(field.type, seed, parsed)
@@ -105,10 +112,17 @@ class Stubber:
         if isinstance(nullable, GraphQLObjectType):
             return self._stub_object(nullable, seed, selection)
         faker = self._seeded_faker(seed)
+        if isinstance(nullable, GraphQLInterfaceType | GraphQLUnionType):
+            # AppSync needs __typename to tell which concrete type it got.
+            possible_types = self._schema.get_possible_types(nullable)
+            concrete = faker.random_element(possible_types)
+            return {
+                "__typename": concrete.name,
+                **self._stub_object(concrete, seed, selection),
+            }
         if isinstance(nullable, GraphQLEnumType):
             return faker.random_element(list(nullable.values))
-        if not isinstance(nullable, GraphQLScalarType):
-            raise NotImplementedError("interface and union stubs")
+        assert isinstance(nullable, GraphQLScalarType)
         generator = self._scalar_generators.get(
             nullable.name, self._scalar_generators["String"]
         )
@@ -118,14 +132,14 @@ class Stubber:
         self, type_: GraphQLObjectType, seed: int, selection: Selection
     ) -> dict[str, Any]:
         stub: dict[str, Any] = {}
-        for name, subselection in selection.items():
+        for name, subselection in fields_for(selection, type_, self._schema).items():
             if name == "__typename":
                 stub[name] = type_.name
                 continue
             field = type_.fields.get(name)
             if field is None:
                 raise UnknownFieldError(f"{type_.name}.{name} is not in the schema")
-            if not subselection and not is_leaf_type(get_named_type(field.type)):
+            if subselection.is_empty() and not is_leaf_type(get_named_type(field.type)):
                 raise InvalidSelectionError(
                     f"{type_.name}.{name} is an object; select its subfields"
                 )
