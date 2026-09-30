@@ -18,6 +18,7 @@ from graphql import (
 
 from stubgql._appsync import AWS_SCALAR_GENERATORS
 from stubgql._errors import InvalidSelectionError, UnknownFieldError
+from stubgql._inference import FieldContext, infer
 from stubgql._scalars import SCALAR_GENERATORS
 from stubgql._schema import SchemaSource, load_schema
 from stubgql._seeding import derive_seed
@@ -89,7 +90,8 @@ class Stubber:
                 else Selection()
             )
         seed = derive_seed(type_name, field_name, args or {})
-        return self._stub(field.type, seed, parsed)
+        context = FieldContext(type_name, field_name, derive_seed(type_name))
+        return self._stub(field.type, seed, parsed, context)
 
     def _seeded_faker(self, seed: int) -> Faker:
         # Faker instances hold random state, so each thread gets its own.
@@ -99,14 +101,22 @@ class Stubber:
         faker.seed_instance(seed)
         return faker
 
-    def _stub(self, type_: GraphQLOutputType, seed: int, selection: Selection) -> Any:
+    def _stub(
+        self,
+        type_: GraphQLOutputType,
+        seed: int,
+        selection: Selection,
+        context: FieldContext,
+    ) -> Any:
         # Every value has its own seed, derived from its parent's seed and its
         # position, so a value doesn't depend on what else is selected.
         nullable = get_nullable_type(type_)
         if isinstance(nullable, GraphQLList):
             length = self._seeded_faker(seed).random_int(*LIST_LENGTH)
             return [
-                self._stub(nullable.of_type, derive_seed(seed, index), selection)
+                self._stub(
+                    nullable.of_type, derive_seed(seed, index), selection, context
+                )
                 for index in range(length)
             ]
         if isinstance(nullable, GraphQLObjectType):
@@ -123,7 +133,7 @@ class Stubber:
         if isinstance(nullable, GraphQLEnumType):
             return faker.random_element(list(nullable.values))
         assert isinstance(nullable, GraphQLScalarType)
-        generator = self._scalar_generators.get(
+        generator = infer(context, nullable.name) or self._scalar_generators.get(
             nullable.name, self._scalar_generators["String"]
         )
         return generator(faker)
@@ -143,5 +153,8 @@ class Stubber:
                 raise InvalidSelectionError(
                     f"{type_.name}.{name} is an object; select its subfields"
                 )
-            stub[name] = self._stub(field.type, derive_seed(seed, name), subselection)
+            context = FieldContext(type_.name, name, seed)
+            stub[name] = self._stub(
+                field.type, derive_seed(seed, name), subselection, context
+            )
         return stub
