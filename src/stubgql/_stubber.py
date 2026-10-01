@@ -1,5 +1,6 @@
 import threading
 from collections.abc import Mapping
+from types import MappingProxyType
 from typing import Any
 
 from faker import Faker
@@ -17,6 +18,7 @@ from graphql import (
 )
 
 from stubgql._appsync import AWS_SCALAR_GENERATORS
+from stubgql._echo import echo_values, fits
 from stubgql._errors import InvalidSelectionError, UnknownFieldError
 from stubgql._inference import FieldContext, infer
 from stubgql._scalars import SCALAR_GENERATORS
@@ -32,6 +34,7 @@ from stubgql._selection import (
 )
 
 LIST_LENGTH = (2, 5)
+NO_ECHO: Mapping[str, Any] = MappingProxyType({})
 
 
 class Stubber:
@@ -91,7 +94,8 @@ class Stubber:
             )
         seed = derive_seed(type_name, field_name, args or {})
         context = FieldContext(type_name, field_name, derive_seed(type_name))
-        return self._stub(field.type, seed, parsed, context)
+        echo = echo_values(args or {})
+        return self._stub(field.type, seed, parsed, context, echo)
 
     def _seeded_faker(self, seed: int) -> Faker:
         # Faker instances hold random state, so each thread gets its own.
@@ -107,6 +111,7 @@ class Stubber:
         seed: int,
         selection: Selection,
         context: FieldContext,
+        echo: Mapping[str, Any] = NO_ECHO,
     ) -> Any:
         # Every value has its own seed, derived from its parent's seed and its
         # position, so a value doesn't depend on what else is selected.
@@ -120,7 +125,7 @@ class Stubber:
                 for index in range(length)
             ]
         if isinstance(nullable, GraphQLObjectType):
-            return self._stub_object(nullable, seed, selection)
+            return self._stub_object(nullable, seed, selection, echo)
         faker = self._seeded_faker(seed)
         if isinstance(nullable, GraphQLInterfaceType | GraphQLUnionType):
             # AppSync needs __typename to tell which concrete type it got.
@@ -128,7 +133,7 @@ class Stubber:
             concrete = faker.random_element(possible_types)
             return {
                 "__typename": concrete.name,
-                **self._stub_object(concrete, seed, selection),
+                **self._stub_object(concrete, seed, selection, echo),
             }
         if isinstance(nullable, GraphQLEnumType):
             return faker.random_element(list(nullable.values))
@@ -139,8 +144,23 @@ class Stubber:
         return generator(faker)
 
     def _stub_object(
-        self, type_: GraphQLObjectType, seed: int, selection: Selection
+        self,
+        type_: GraphQLObjectType,
+        seed: int,
+        selection: Selection,
+        echo: Mapping[str, Any] = NO_ECHO,
     ) -> dict[str, Any]:
+        if (id_field := type_.fields.get("id")) is not None:
+            # An entity: its id decides every other value, so the same entity
+            # looks the same wherever it appears.
+            entity_id = echo.get("id")
+            if entity_id is None or not fits(entity_id, id_field.type):
+                context = FieldContext(type_.name, "id", seed)
+                entity_id = self._stub(
+                    id_field.type, derive_seed(seed, "id"), Selection(), context
+                )
+            seed = derive_seed("entity", type_.name, entity_id)
+            echo = {**echo, "id": entity_id}
         stub: dict[str, Any] = {}
         for name, subselection in fields_for(selection, type_, self._schema).items():
             if name == "__typename":
@@ -153,6 +173,9 @@ class Stubber:
                 raise InvalidSelectionError(
                     f"{type_.name}.{name} is an object; select its subfields"
                 )
+            if name in echo and fits(echo[name], field.type):
+                stub[name] = echo[name]
+                continue
             context = FieldContext(type_.name, name, seed)
             stub[name] = self._stub(
                 field.type, derive_seed(seed, name), subselection, context
