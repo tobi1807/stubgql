@@ -43,6 +43,8 @@ pip install stubgql
 
 Requires Python 3.11+.
 
+When packaging for AWS Lambda, include compiled bytecode (`pip install --compile` or `uv pip install --compile-bytecode`). Without it, every cold start spends a few hundred milliseconds compiling stubgql and its dependencies.
+
 ## License
 
 MIT

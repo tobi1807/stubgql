@@ -59,5 +59,7 @@ jobs:
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
           enable-cache: true
-      - run: uv sync --locked --no-dev
+      # Precompiled bytecode, as in a properly built deployment package;
+      # without it the first import also pays for compiling every module.
+      - run: uv sync --locked --no-dev --compile-bytecode
       - run: uv run --no-sync python scripts/check_import_time.py
