@@ -2,7 +2,7 @@
 
 Schema-aware stub data for GraphQL, with built-in AWS AppSync support.
 
-> **Status: pre-alpha.** The API below is the design target and isn't implemented yet.
+> **Status: pre-alpha.** Not yet published to PyPI, and the API may still change.
 
 stubgql stands in for resolvers that don't exist yet. Give it a schema and it returns realistic, schema-conformant data for any field, so you can exercise the schema and its access rules before the real data sources are built.
 
@@ -28,6 +28,7 @@ stubber.resolve("Query", "getUser", args={"id": "1"})
 - **Deterministic output.** The same query returns the same data every time.
 - **Consistent entities.** An object with an `id` looks the same wherever it appears.
 - **Argument echo.** `getUser(id: "1")` returns `id: "1"`, and mutation inputs show up in the result.
+- **Nested resolvers.** A field resolved under a parent, such as `Post.author`, uses the parent's foreign key (`authorId`) when it has one, so it matches `getUser(id:)` for the same id.
 
 ## What it doesn't do
 

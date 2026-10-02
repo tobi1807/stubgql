@@ -1,10 +1,14 @@
 import json
+from collections.abc import Mapping
+from dataclasses import dataclass
+from typing import Any
 
 from faker import Faker
 from graphql import (
     DirectiveDefinitionNode,
     DirectiveNode,
     DocumentNode,
+    GraphQLNamedType,
     NamedTypeNode,
     TypeDefinitionNode,
     Visitor,
@@ -12,6 +16,7 @@ from graphql import (
     visit,
 )
 
+from stubgql._errors import InvalidEventError
 from stubgql._scalars import (
     ScalarGenerator,
     fictional_phone,
@@ -19,6 +24,7 @@ from stubgql._scalars import (
     iso_time,
     moment,
 )
+from stubgql._selection import Selection
 
 AWS_SCALARS = frozenset(
     {
@@ -104,3 +110,54 @@ AWS_SCALAR_GENERATORS: dict[str, ScalarGenerator] = {
     "AWSPhone": fictional_phone,
     "AWSIPAddress": lambda faker: faker.ipv4(),
 }
+
+
+def unwrap_selection(
+    selection: Selection, field_name: str, return_type: GraphQLNamedType
+) -> Selection:
+    """Strip the resolved field when selectionSetGraphQL is wrapped in it.
+
+    The AppSync docs show `{ getPost(id: $id) { title } }` for `getPost`, where
+    the selection under the field would be `{ title }`.
+    """
+    own_fields = getattr(return_type, "fields", {})
+    wrapped = (
+        list(selection.fields) == [field_name]
+        and not selection.fragments
+        and not selection.has_named_fragment
+        and field_name not in own_fields
+    )
+    return selection.fields[field_name] if wrapped else selection
+
+
+@dataclass(frozen=True)
+class FieldRequest:
+    """What an AppSync event asks for."""
+
+    type_name: str
+    field_name: str
+    args: Mapping[str, Any]
+    selection: str | None
+    source: Mapping[str, Any] | None
+
+
+def read_event(event: object) -> FieldRequest:
+    """Read the parts of an AppSync direct resolver event that stubgql uses."""
+    if not isinstance(event, Mapping):
+        raise InvalidEventError(
+            f"Expected an AppSync event (a dict), got {type(event).__name__}"
+        )
+    info = event.get("info")
+    if not isinstance(info, Mapping):
+        raise InvalidEventError("AppSync event is missing info")
+    for key in ("parentTypeName", "fieldName"):
+        if not isinstance(info.get(key), str):
+            raise InvalidEventError(f"AppSync event is missing info.{key}")
+    source = event.get("source")
+    return FieldRequest(
+        type_name=info["parentTypeName"],
+        field_name=info["fieldName"],
+        args=event.get("arguments") or {},
+        selection=info.get("selectionSetGraphQL") or None,
+        source=source if isinstance(source, Mapping) else None,
+    )

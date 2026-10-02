@@ -3,6 +3,7 @@
 from importlib.metadata import version
 
 from stubgql._errors import (
+    InvalidEventError,
     InvalidSelectionError,
     SchemaError,
     StubgqlError,
@@ -11,6 +12,7 @@ from stubgql._errors import (
 from stubgql._stubber import Stubber
 
 __all__ = [
+    "InvalidEventError",
     "InvalidSelectionError",
     "SchemaError",
     "Stubber",

@@ -12,3 +12,7 @@ class UnknownFieldError(StubgqlError):
 
 class InvalidSelectionError(StubgqlError):
     """The selection isn't a valid GraphQL selection set."""
+
+
+class InvalidEventError(StubgqlError):
+    """The event isn't an AWS AppSync resolver event."""

@@ -6,6 +6,7 @@ from typing import Any
 from faker import Faker
 from graphql import (
     GraphQLEnumType,
+    GraphQLField,
     GraphQLInterfaceType,
     GraphQLList,
     GraphQLObjectType,
@@ -17,7 +18,7 @@ from graphql import (
     is_leaf_type,
 )
 
-from stubgql._appsync import AWS_SCALAR_GENERATORS
+from stubgql._appsync import AWS_SCALAR_GENERATORS, read_event, unwrap_selection
 from stubgql._echo import echo_values, fits, foreign_key
 from stubgql._errors import InvalidSelectionError, UnknownFieldError
 from stubgql._inference import FieldContext, infer
@@ -81,16 +82,64 @@ class Stubber:
             UnknownFieldError: The type or a selected field isn't in the schema.
             InvalidSelectionError: The selection isn't a valid selection set.
         """
+        parsed = parse_selection(selection) if selection else None
+        return self._resolve(type_name, field_name, args, parsed, source)
+
+    def handle_appsync(self, event: Mapping[str, Any] | list[Mapping[str, Any]]) -> Any:
+        """Produce the response to an AWS AppSync direct resolver event.
+
+        Args:
+            event: The event AppSync sends a direct Lambda resolver, or a
+                list of them when batching is enabled.
+
+        Returns:
+            The stub for the field the event asks about, or a list with one
+            stub per event, in order, for a batch.
+
+        Raises:
+            InvalidEventError: The event isn't an AppSync resolver event.
+            UnknownFieldError: The event names a type or field that isn't in
+                the schema.
+        """
+        if isinstance(event, list):
+            return [self.handle_appsync(single) for single in event]
+        request = read_event(event)
+        selection = None
+        if request.selection:
+            field = self._field(request.type_name, request.field_name)
+            selection = unwrap_selection(
+                parse_selection(request.selection),
+                request.field_name,
+                get_named_type(field.type),
+            )
+        return self._resolve(
+            request.type_name,
+            request.field_name,
+            request.args,
+            selection,
+            request.source,
+        )
+
+    def _field(self, type_name: str, field_name: str) -> GraphQLField:
         parent = self._schema.get_type(type_name)
         fields = parent.fields if isinstance(parent, GraphQLObjectType) else {}
         field = fields.get(field_name)
         if field is None:
             raise UnknownFieldError(f"{type_name}.{field_name} is not in the schema")
-        if selection:
-            parsed = parse_selection(selection)
-        else:
+        return field
+
+    def _resolve(
+        self,
+        type_name: str,
+        field_name: str,
+        args: Mapping[str, Any] | None,
+        selection: Selection | None,
+        source: Mapping[str, Any] | None,
+    ) -> Any:
+        field = self._field(type_name, field_name)
+        if selection is None:
             named = get_named_type(field.type)
-            parsed = (
+            selection = (
                 full_selection(named, FULL_SELECTION_DEPTH, self._schema)
                 if isinstance(named, CompositeType)
                 else Selection()
@@ -105,7 +154,7 @@ class Stubber:
         key = foreign_key(source, field_name) if source is not None else None
         if key is not None:
             echo.setdefault("id", key)  # an id argument wins
-        return self._stub(field.type, seed, parsed, context, echo)
+        return self._stub(field.type, seed, selection, context, echo)
 
     def _seeded_faker(self, seed: int) -> Faker:
         # Faker instances hold random state, so each thread gets its own.
