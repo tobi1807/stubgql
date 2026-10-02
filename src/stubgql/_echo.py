@@ -27,6 +27,14 @@ def echo_values(args: Mapping[str, Any]) -> dict[str, Any]:
     return values
 
 
+def foreign_key(source: Mapping[str, Any], field_name: str) -> Any:
+    """The id a parent stores for a field, such as `authorId` for `author`."""
+    for key in (f"{field_name}Id", f"{field_name}_id"):
+        if key in source:
+            return source[key]
+    return None
+
+
 def fits(value: Any, type_: GraphQLOutputType) -> bool:
     """Whether an argument value is a valid result for a field of this type."""
     if value is None:

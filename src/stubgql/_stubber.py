@@ -18,7 +18,7 @@ from graphql import (
 )
 
 from stubgql._appsync import AWS_SCALAR_GENERATORS
-from stubgql._echo import echo_values, fits
+from stubgql._echo import echo_values, fits, foreign_key
 from stubgql._errors import InvalidSelectionError, UnknownFieldError
 from stubgql._inference import FieldContext, infer
 from stubgql._scalars import SCALAR_GENERATORS
@@ -58,6 +58,7 @@ class Stubber:
         *,
         args: Mapping[str, Any] | None = None,
         selection: str | None = None,
+        source: Mapping[str, Any] | None = None,
     ) -> Any:
         """Produce a stub for one field of one type.
 
@@ -70,6 +71,8 @@ class Stubber:
                 object, as a GraphQL selection set such as
                 `"{ id name posts { title } }"`. Without one, every field is
                 included, down to three levels of nested objects.
+            source: The parent object, for fields resolved under another
+                object, such as a post when resolving `Post.author`.
 
         Returns:
             A value conforming to the field's type.
@@ -93,8 +96,15 @@ class Stubber:
                 else Selection()
             )
         seed = derive_seed(type_name, field_name, args or {})
+        if source is not None:
+            # A parent's other fields depend on what its query selected, so
+            # only its id identifies it when it has one.
+            seed = derive_seed(seed, source.get("id", source))
         context = FieldContext(type_name, field_name, derive_seed(type_name))
         echo = echo_values(args or {})
+        key = foreign_key(source, field_name) if source is not None else None
+        if key is not None:
+            echo.setdefault("id", key)  # an id argument wins
         return self._stub(field.type, seed, parsed, context, echo)
 
     def _seeded_faker(self, seed: int) -> Faker:
