@@ -52,6 +52,8 @@ def fits(value: Any, type_: GraphQLOutputType) -> bool:
 
 
 def _fits_scalar(value: Any, scalar_name: str) -> bool:
+    if scalar_name == "AWSJSON":
+        return True  # AppSync hands JSON arguments over already parsed.
     if isinstance(value, bool):
         return scalar_name == "Boolean"
     if scalar_name in {"Int", "AWSTimestamp"}:

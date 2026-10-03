@@ -1,4 +1,3 @@
-import json
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
@@ -95,8 +94,10 @@ def with_appsync_prelude(document: DocumentNode) -> DocumentNode:
     return DocumentNode(definitions=(*document.definitions, *prelude.definitions))
 
 
-def _aws_json(faker: Faker) -> str:
-    return json.dumps({"id": faker.uuid4(), "name": faker.word()})
+def _aws_json(faker: Faker) -> dict[str, Any]:
+    # The JSON value itself: AppSync serializes it, and a JSON string would be
+    # encoded twice.
+    return {"id": faker.uuid4(), "name": faker.word()}
 
 
 AWS_SCALAR_GENERATORS: dict[str, ScalarGenerator] = {

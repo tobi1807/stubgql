@@ -51,8 +51,9 @@ def is_aws_email(value):
 
 
 def is_aws_json(value):
-    # Documented as a JSON string
-    return isinstance(value, str) and json.loads(value) is not None
+    # A Lambda returns the JSON value itself; AppSync serializes it. Returning a
+    # string made a deployed API encode it twice.
+    return isinstance(value, dict) and json.loads(json.dumps(value)) == value
 
 
 def is_aws_url(value):

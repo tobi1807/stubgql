@@ -18,6 +18,7 @@ type Post {
   title: String!
   status: Status!
   tags: [String!]
+  metadata: AWSJSON
   author: User!
 }
 
@@ -25,6 +26,7 @@ input CreatePostInput {
   title: String!
   status: Status
   tags: [String!]
+  metadata: AWSJSON
 }
 
 input UpdatePostInput {
@@ -129,3 +131,14 @@ def test_echoes_arguments_into_interface_results():
     )
     node = stubber.resolve("Query", "node", args={"id": "n1"}, selection="{ id }")
     assert node["id"] == "n1"
+
+
+def test_echoes_json_values_into_awsjson_fields(stubber):
+    # AppSync hands AWSJSON arguments to the resolver already parsed.
+    post = stubber.resolve(
+        "Mutation",
+        "createPost",
+        args={"input": {"title": "Hi", "metadata": {"a": [1, 2]}}},
+        selection="{ metadata }",
+    )
+    assert post["metadata"] == {"a": [1, 2]}
