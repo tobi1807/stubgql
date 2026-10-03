@@ -24,12 +24,16 @@ def test_handles_a_single_event(stubber):
     assert all(set(post) == {"id", "title"} for post in user["posts"])
 
 
-def test_handles_a_batch_event_with_one_result_per_event_in_order(stubber):
+def test_handles_a_batch_event_with_one_wrapped_result_per_event_in_order(stubber):
+    # AppSync requires batch items as {data, errorMessage, errorType}; verified
+    # against a deployed API with both direct and VTL BatchInvoke resolvers.
     events = load_event("batch_post_author.json")
-    authors = stubber.handle_appsync(events)
-    assert isinstance(authors, list)
-    assert authors == [stubber.handle_appsync(event) for event in events]
-    assert authors[0] != authors[1]
+    results = stubber.handle_appsync(events)
+    assert results == [
+        {"data": stubber.handle_appsync(event), "errorMessage": None, "errorType": None}
+        for event in events
+    ]
+    assert results[0]["data"] != results[1]["data"]
 
 
 def test_unwraps_a_selection_that_includes_the_field_itself(stubber):

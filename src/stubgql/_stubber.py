@@ -93,8 +93,9 @@ class Stubber:
                 list of them when batching is enabled.
 
         Returns:
-            The stub for the field the event asks about, or a list with one
-            stub per event, in order, for a batch.
+            The stub for the field the event asks about. For a batch, a list
+            with one `{"data": stub, "errorMessage": None, "errorType": None}`
+            item per event, in order, which is the shape AppSync requires.
 
         Raises:
             InvalidEventError: The event isn't an AppSync resolver event.
@@ -102,7 +103,14 @@ class Stubber:
                 the schema.
         """
         if isinstance(event, list):
-            return [self.handle_appsync(single) for single in event]
+            return [
+                {
+                    "data": self.handle_appsync(single),
+                    "errorMessage": None,
+                    "errorType": None,
+                }
+                for single in event
+            ]
         request = read_event(event)
         selection = None
         if request.selection:
