@@ -59,6 +59,9 @@ def _fits_scalar(value: Any, scalar_name: str) -> bool:
         return True  # AppSync hands JSON arguments over already parsed.
     if kind == "integer":
         return isinstance(value, int) and not isinstance(value, bool)
+    if kind == "decimal":
+        # Decimals arrive as numbers, or as strings to keep their precision.
+        return isinstance(value, int | float | str) and not isinstance(value, bool)
     if isinstance(value, bool):
         return scalar_name == "Boolean"
     if scalar_name in {"Int", "AWSTimestamp"}:

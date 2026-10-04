@@ -209,7 +209,7 @@ def test_echoes_strings_into_the_other_custom_scalar_fields(field, value):
     assert echoed(field, value) == value
 
 
-@pytest.mark.parametrize("field", ["price", "seenAt", "contact"])
+@pytest.mark.parametrize("field", ["seenAt", "contact"])
 def test_does_not_echo_numbers_into_string_like_custom_scalar_fields(field):
     assert echoed(field, 7) != 7
 
@@ -241,3 +241,22 @@ def test_field_names_do_not_override_what_a_custom_scalar_name_says():
 def test_custom_scalar_stubs_are_the_same_in_every_stubber():
     for scalar_name in ["UUID", "DateTime", "JSON", "Email", "BigInt", "Decimal"]:
         assert stubs_of(scalar_name) == stubs_of(scalar_name)
+
+
+def test_echoes_numeric_arguments_into_decimal_fields():
+    stubber = Stubber(
+        """
+        scalar Decimal
+        type Product { id: ID! price: Decimal }
+        input PriceInput { id: ID! price: Decimal }
+        type Mutation { setPrice(input: PriceInput!): Product }
+        type Query { product: Product }
+        """
+    )
+    product = stubber.resolve(
+        "Mutation",
+        "setPrice",
+        args={"input": {"id": "p1", "price": 12.5}},
+        selection="{ price }",
+    )
+    assert product["price"] == 12.5
