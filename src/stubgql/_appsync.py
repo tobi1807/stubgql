@@ -2,7 +2,6 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
-from faker import Faker
 from graphql import (
     DirectiveDefinitionNode,
     DirectiveNode,
@@ -21,6 +20,7 @@ from stubgql._scalars import (
     fictional_phone,
     iso_date_time,
     iso_time,
+    json_object,
     moment,
 )
 from stubgql._selection import Selection
@@ -94,19 +94,13 @@ def with_appsync_prelude(document: DocumentNode) -> DocumentNode:
     return DocumentNode(definitions=(*document.definitions, *prelude.definitions))
 
 
-def _aws_json(faker: Faker) -> dict[str, Any]:
-    # The JSON value itself: AppSync serializes it, and a JSON string would be
-    # encoded twice.
-    return {"id": faker.uuid4(), "name": faker.word()}
-
-
 AWS_SCALAR_GENERATORS: dict[str, ScalarGenerator] = {
     "AWSDate": lambda faker: moment(faker.random).date().isoformat(),
     "AWSTime": lambda faker: iso_time(moment(faker.random)),
     "AWSDateTime": lambda faker: iso_date_time(moment(faker.random)),
     "AWSTimestamp": lambda faker: int(moment(faker.random).timestamp()),
     "AWSEmail": lambda faker: faker.email(),
-    "AWSJSON": _aws_json,
+    "AWSJSON": json_object,
     "AWSURL": lambda faker: faker.url(),
     "AWSPhone": fictional_phone,
     "AWSIPAddress": lambda faker: faker.ipv4(),

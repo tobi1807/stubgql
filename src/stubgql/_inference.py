@@ -12,6 +12,7 @@ from stubgql._scalars import (
     fictional_phone,
     iso_date_time,
     iso_time,
+    json_object,
     moment,
 )
 from stubgql._seeding import derive_seed
@@ -183,12 +184,81 @@ BIRTHS_START = datetime(1945, 1, 1, tzinfo=UTC)
 BIRTHS_END = datetime(2008, 1, 1, tzinfo=UTC)
 
 
+# Scalar names, as lowercase words, mapped to the kind of value they hold.
+SCALAR_KINDS: dict[tuple[str, ...], str] = {
+    ("uuid",): "uuid",
+    ("guid",): "uuid",
+    ("date", "time"): "datetime",
+    ("datetime",): "datetime",
+    ("timestamp",): "datetime",
+    ("instant",): "datetime",
+    ("date",): "date",
+    ("time",): "time",
+    ("json",): "json",
+    ("json", "object"): "json",
+    ("url",): "url",
+    ("uri",): "url",
+    ("email",): "email",
+    ("email", "address"): "email",
+    ("phone",): "phone",
+    ("phone", "number"): "phone",
+    ("big", "int"): "integer",
+    ("bigint",): "integer",
+    ("long",): "integer",
+    ("decimal",): "decimal",
+    ("big", "decimal"): "decimal",
+    ("bigdecimal",): "decimal",
+}
+
+# Words that say how a date or time is written, not what it is: DateTimeISO,
+# LocalDate. Other kinds don't take them, so TimeZone or LocalPhone stay unknown.
+MOMENT_QUALIFIERS = frozenset(
+    {"iso", "8601", "rfc", "3339", "utc", "local", "zoned", "offset"}
+)
+
+MOMENT_FORMATS: dict[str, Callable[[datetime], str]] = {
+    "datetime": iso_date_time,
+    "date": lambda value: value.date().isoformat(),
+    "time": iso_time,
+}
+
+SCALAR_KIND_GENERATORS: dict[str, ScalarGenerator] = {
+    "uuid": lambda faker: faker.uuid4(),
+    "json": json_object,
+    "url": _web_url,
+    "email": lambda faker: faker.email(),
+    "phone": fictional_phone,
+    "integer": lambda faker: faker.random_int(0, 10**12),
+    "decimal": _money,
+    **{
+        kind: lambda faker, format=format: format(moment(faker.random))
+        for kind, format in MOMENT_FORMATS.items()
+    },
+}
+
+
+def scalar_kind(scalar_name: str) -> str | None:
+    """The kind of value a custom scalar's name suggests, such as `"uuid"`."""
+    name_words = tuple(words(scalar_name))
+    if kind := SCALAR_KINDS.get(name_words):
+        return kind
+    unqualified = tuple(word for word in name_words if word not in MOMENT_QUALIFIERS)
+    kind = SCALAR_KINDS.get(unqualified)
+    return kind if kind in MOMENT_FORMATS else None
+
+
+def infer_from_scalar_name(scalar_name: str) -> ScalarGenerator | None:
+    """Pick a generator from a custom scalar's name, such as `UUID`."""
+    kind = scalar_kind(scalar_name)
+    return SCALAR_KIND_GENERATORS[kind] if kind else None
+
+
 def infer(context: FieldContext, scalar_name: str) -> ScalarGenerator | None:
     """Pick a generator from a field's name, if a rule matches its scalar type."""
     field_words = words(context.field_name)
-    if scalar_name in TEMPORAL_SCALARS and (
-        temporal := _temporal(context, field_words, scalar_name)
-    ):
+    if (
+        scalar_name in TEMPORAL_SCALARS or scalar_kind(scalar_name) in MOMENT_FORMATS
+    ) and (temporal := _temporal(context, field_words, scalar_name)):
         return temporal
     for candidate in RULES:
         if (
@@ -231,6 +301,8 @@ def _format_moment(value: datetime, scalar_name: str, date_only: bool) -> Any:
         return int(value.timestamp())
     if scalar_name == "AWSTime":
         return iso_time(value)
+    if (kind := scalar_kind(scalar_name)) in MOMENT_FORMATS:
+        return MOMENT_FORMATS[kind](value)  # a custom scalar is never cut short
     if scalar_name == "AWSDate" or date_only:
         return value.date().isoformat()
     return iso_date_time(value)

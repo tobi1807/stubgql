@@ -35,6 +35,11 @@ def fictional_phone(faker: Faker) -> str:
     return f"+1 {faker.random_int(201, 989)} 555 {faker.random_int(100, 199):04d}"
 
 
+def json_object(faker: Faker) -> dict[str, Any]:
+    """A small JSON object, as a dict: a JSON string would be encoded twice."""
+    return {"id": faker.uuid4(), "name": faker.word()}
+
+
 SCALAR_GENERATORS: dict[str, ScalarGenerator] = {
     "String": lambda faker: faker.word(),
     "Int": lambda faker: faker.random_int(0, 1000),

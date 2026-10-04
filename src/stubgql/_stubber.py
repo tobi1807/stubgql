@@ -21,7 +21,7 @@ from graphql import (
 from stubgql._appsync import AWS_SCALAR_GENERATORS, read_event, unwrap_selection
 from stubgql._echo import echo_values, fits, foreign_key
 from stubgql._errors import InvalidSelectionError, UnknownFieldError
-from stubgql._inference import FieldContext, infer
+from stubgql._inference import FieldContext, infer, infer_from_scalar_name
 from stubgql._scalars import SCALAR_GENERATORS
 from stubgql._schema import SchemaSource, load_schema
 from stubgql._seeding import derive_seed
@@ -205,8 +205,11 @@ class Stubber:
         if isinstance(nullable, GraphQLEnumType):
             return faker.random_element(list(nullable.values))
         assert isinstance(nullable, GraphQLScalarType)
-        generator = infer(context, nullable.name) or self._scalar_generators.get(
-            nullable.name, self._scalar_generators["String"]
+        generator = (
+            infer(context, nullable.name)
+            or self._scalar_generators.get(nullable.name)
+            or infer_from_scalar_name(nullable.name)
+            or self._scalar_generators["String"]
         )
         return generator(faker)
 

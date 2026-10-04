@@ -10,6 +10,8 @@ from graphql import (
     get_nullable_type,
 )
 
+from stubgql._inference import scalar_kind
+
 
 def echo_values(args: Mapping[str, Any]) -> dict[str, Any]:
     """Argument values that should reappear in the returned object.
@@ -52,8 +54,11 @@ def fits(value: Any, type_: GraphQLOutputType) -> bool:
 
 
 def _fits_scalar(value: Any, scalar_name: str) -> bool:
-    if scalar_name == "AWSJSON":
+    kind = scalar_kind(scalar_name)
+    if scalar_name == "AWSJSON" or kind == "json":
         return True  # AppSync hands JSON arguments over already parsed.
+    if kind == "integer":
+        return isinstance(value, int) and not isinstance(value, bool)
     if isinstance(value, bool):
         return scalar_name == "Boolean"
     if scalar_name in {"Int", "AWSTimestamp"}:

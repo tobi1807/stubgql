@@ -23,7 +23,7 @@ stubber.resolve("Query", "getUser", args={"id": "1"})
 
 ## What it does automatically
 
-- **Realistic values from names.** `email`, `firstName`, `avatarUrl`, `createdAt`, `price` and many more are inferred from field and type names.
+- **Realistic values from names.** `email`, `firstName`, `avatarUrl`, `createdAt`, `price` and many more are inferred from field and type names, and custom scalars such as `DateTime`, `UUID`, `JSON` or `Email` from the scalar's name.
 - **AppSync without setup.** AWS scalars (`AWSDateTime`, `AWSJSON`, `AWSEmail`, …) and directives (`@aws_iam`, `@aws_subscribe`, …) work even though AppSync schemas don't declare them. Single and batch events are both handled.
 - **Deterministic output.** The same query returns the same data every time.
 - **Consistent entities.** An object with an `id` looks the same wherever it appears.
