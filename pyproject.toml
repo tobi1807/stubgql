@@ -1,6 +1,6 @@
 [project]
 name = "stubgql"
-version = "0.0.1"
+version = "0.1.0"
 description = "Schema-aware stub data for GraphQL, with built-in AWS AppSync support"
 readme = "README.md"
 license = "MIT"

@@ -2,7 +2,7 @@
 
 Schema-aware stub data for GraphQL, with built-in AWS AppSync support.
 
-> **Status: pre-alpha.** Not yet published to PyPI, and the API may still change.
+> **Status: pre-alpha.** The API may still change.
 
 stubgql stands in for resolvers that don't exist yet. Give it a schema and it returns realistic, schema-conformant data for any field, so you can exercise the schema and its access rules before the real data sources are built.
 
